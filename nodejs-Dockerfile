@@ -1,0 +1,18 @@
+# Этап 1: Сборка зависимостей
+FROM node:12 AS builder
+WORKDIR /app
+COPY package. json package-lock. json ./
+RUN npm install
+
+# Копирование исходного кода и сборка приложения
+COPY . .
+RUN npm run build
+
+# Этап 2: Создание конечного образа
+FROM node: 12-slim
+WORKDIR /app
+COPY --from=builder /app/build ./build
+COPY --from=builder /app/node_modules •/node_modules
+
+# Запуск приложения
+CMD [ "node", "build/app.js"]
