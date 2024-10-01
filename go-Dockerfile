@@ -1,0 +1,24 @@
+FROM alpine:latest AS build
+RUN apk --update add ca-certificates git go
+
+# Устанавливаем swag и генерируем документацию
+WORKDIR /app
+COPY . .
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+RUN export PATH=$PATH:$(go env GOPATH)/bin && swag init -g ./cmd/main/main.go -o ./docs
+RUN go build -o /backend ./cmd/main/main.go
+
+RUN echo "Built binary version:" && /backend || echo "Failed to build binary"
+
+FROM alpine:latest AS certs
+RUN apk --update add ca-certificates
+
+
+FROM scratch
+ENV PATH=/bin
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY .env* /
+COPY --from=build /backend /backend
+COPY --from=build /app/docs /app/docs
+
+ENTRYPOINT ["/backend"]
